@@ -9,7 +9,7 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 )
 
-# 🔐 Токен из переменных среды
+# 🔐 Токен
 TOKEN = os.getenv("TOKEN")
 
 # Московское время
@@ -18,7 +18,7 @@ timezone = pytz.timezone("Europe/Moscow")
 # Дата отсчета
 start_date = timezone.localize(datetime(2025, 9, 15, 21, 33))
 
-# Рандомные эмодзи и романтичные цитаты
+# Эмодзи и цитаты
 EMOJIS = ["🌹", "💖", "🐱", "🕊️", "💌", "✨", "💫", "🌸"]
 QUOTES = [
     "С каждым днём я люблю тебя сильнее ❤️",
@@ -28,10 +28,9 @@ QUOTES = [
     "Ты делаешь мою жизнь ярче 🌟",
     "Моё сердце бьётся только для тебя 💓"
 ]
-
 KISSES = ["😘", "😚", "💋", "😍"]
 
-# Прогресс-бар любви
+# Прогресс-бар
 def progress_bar(total_days):
     length = 10
     filled = total_days % (length + 1)
@@ -42,14 +41,11 @@ def format_time():
     now = datetime.now(timezone)
     if now < start_date:
         return "⏳ Эта дата ещё не наступила ❤️"
-
     diff = relativedelta(now, start_date)
     total_days = (now - start_date).days
-
     emoji = random.choice(EMOJIS)
     quote = random.choice(QUOTES)
     bar = progress_bar(total_days)
-
     return (
         f"{emoji} Наш счётчик любви {emoji}\n\n"
         f"🗓 {diff.years} лет\n"
@@ -62,7 +58,7 @@ def format_time():
         f"💌 {quote}"
     )
 
-# --- Inline-кнопки ---
+# Inline-кнопки
 def get_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔄 Обновить счётчик", callback_data="update")],
@@ -70,7 +66,7 @@ def get_keyboard():
         [InlineKeyboardButton("❤️ Отправить поцелуй", callback_data="kiss")]
     ])
 
-# --- /start ---
+# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     if "chat_ids" not in context.application.bot_data:
@@ -81,7 +77,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.application.create_task(auto_update(message))
     await update.message.reply_text("Бот запущен и готов к любви! 💖")
 
-# --- Автообновление ---
+# Автообновление
 async def auto_update(message):
     while True:
         try:
@@ -90,11 +86,10 @@ async def auto_update(message):
         except:
             break
 
-# --- Обработка кнопок ---
+# Кнопки
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     if query.data == "update":
         await query.edit_message_text(format_time(), reply_markup=query.message.reply_markup)
     elif query.data == "surprise":
@@ -103,7 +98,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "kiss":
         await query.edit_message_text(f"{random.choice(KISSES)} Поцелуй отправлен!", reply_markup=query.message.reply_markup)
 
-# --- Реакции на команды ---
+# Команды
 async def love(update: Update, context: ContextTypes.DEFAULT_TYPE):
     quote = random.choice(QUOTES)
     await update.message.reply_text(f"💖 {quote}")
@@ -118,7 +113,7 @@ async def surprise_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def kiss_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{random.choice(KISSES)} Поцелуй отправлен!")
 
-# --- Ежедневные уведомления ---
+# Ежедневные уведомления
 async def daily_notifications(app):
     while True:
         now = datetime.now(timezone)
@@ -134,9 +129,9 @@ async def daily_notifications(app):
             for chat_id in chat_ids:
                 await app.bot.send_message(chat_id, f"🌙 Спокойной ночи! {format_time()}")
 
-        await asyncio.sleep(60)  # проверка каждую минуту
+        await asyncio.sleep(60)
 
-# --- Основное ---
+# Основное
 app = ApplicationBuilder().token(TOKEN).build()
 
 # Команды
@@ -145,12 +140,13 @@ app.add_handler(CommandHandler("love", love))
 app.add_handler(CommandHandler("status", status))
 app.add_handler(CommandHandler("surprise", surprise_cmd))
 app.add_handler(CommandHandler("kiss", kiss_cmd))
-
-# Inline кнопки
 app.add_handler(CallbackQueryHandler(button))
 
-# Запуск ежедневных уведомлений
-app.create_task(daily_notifications(app))
+# Запуск уведомлений после старта
+async def on_startup(app):
+    app.create_task(daily_notifications(app))
+
+app.post_init(on_startup)
 
 print("Бот запущен ❤️")
 app.run_polling()
